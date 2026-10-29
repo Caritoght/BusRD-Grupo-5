@@ -1,0 +1,213 @@
+# BusRD — Proyecto de Base de Datos
+
+## 1. Descripción del proyecto
+
+BusRD es un sistema de gestión de viajes y venta de boletos de autobús desarrollado en SQL Server. El proyecto tiene como objetivo aplicar conocimientos de integridad de datos, transacciones, concurrencia, optimización de consultas, seguridad y respaldo y recuperación de bases de datos.
+
+El trabajo consiste en detectar y corregir inconsistencias, prevenir la doble venta de asientos, optimizar consultas SQL, establecer permisos por roles y comprobar la recuperación de información mediante copias de seguridad.
+
+## 2. Integrantes del grupo
+
+| N.º | Nombre del integrante 
+|---|---|---|
+| 1 | BRIAN JOSE BEATO MARTINEZ | Estudiante |
+| 2 | CAROLYN GERONIMO HENRIQUEZ | Estudiante |
+| 3 | JHANNIF JOSEFINA GARABITO SUERO | Estudiante |
+| 4 | MARVIN FERNANDEZ ALMANZAR | Estudiante |
+
+## 3. Datos asignados al grupo
+
+- **Número de grupo:** 4
+- **Cliente asignado:** Cédula del cliente N.º de grupo × 1000.
+- **Motor de base de datos:** Microsoft SQL Server.
+- **Herramienta de trabajo:** SQL Server Management Studio (SSMS).
+- **Base de datos principal:** `BusRD`.
+- **Base de datos para recuperación:** `BusRD_Recuperada`.
+
+### Modelo de datos
+
+La base de datos contiene las siguientes tablas:
+
+| Tabla | Descripción | Filas aproximadas |
+|---|---|---:|
+| Rutas | Origen, destino, distancia y precio base | 20 |
+| Autobuses | Placa, tipo y capacidad | 40 |
+| Asientos | Asientos físicos de cada autobús | 1,640 |
+| Viajes | Salidas de rutas en fechas determinadas | 16,400 |
+| Clientes | Información de los pasajeros registrados | 50,000 |
+| Boletos | Asientos vendidos para los viajes | 230,000 |
+| Pagos | Pagos asociados a los boletos | 225,000 |
+
+**Nota:** La base de datos entregada inicialmente contiene únicamente llaves primarias. No incluye llaves foráneas, restricciones `CHECK`, índices secundarios ni restricciones de unicidad. También contiene datos inconsistentes que deben identificarse y corregirse.
+
+## 4. Estructura del repositorio
+
+```text
+BusRD-Grupo<N>/
+├── README.md
+├── scripts/
+│   ├── 01_integridad.sql
+│   ├── 02_sp_VenderBoleto.sql
+│   ├── 03_sp_AnularBoleto.sql
+│   ├── 04_demo_concurrencia_sesionA.sql
+│   ├── 05_demo_concurrencia_sesionB.sql
+│   ├── 06_indices_y_consultas_optimizadas.sql
+│   ├── 07_seguridad.sql
+│   └── 08_respaldo_y_restauracion.sql
+└── evidencias/
+    ├── 01_integridad/
+    ├── 02_concurrencia/
+    ├── 03_optimizacion/
+    ├── 04_seguridad/
+    └── 05_respaldos/
+```
+
+Las carpetas de evidencias se utilizarán para organizar las capturas de pantalla de cada entregable.
+
+## 5. Recursos entregados por el docente
+
+Antes de ejecutar los scripts desarrollados por el grupo, se deben utilizar los archivos SQL proporcionados para preparar el entorno de trabajo.
+
+| Orden | Archivo | Función |
+|---|---|---|
+| 1 | `01_BusRD_base.sql` | Crear la base de datos y cargar los datos iniciales. |
+| 2 | `02_sp_VenderBoleto_v0.sql` | Crear el procedimiento de venta original que presenta el problema de concurrencia. |
+| 3 | `03_consultas_lentas.sql` | Proporcionar las tres consultas que se deben optimizar. |
+
+**Importante:** El primer script puede tardar entre uno y tres minutos. Se debe esperar a que termine correctamente antes de continuar.
+
+## 6. Orden de ejecución de los scripts del proyecto
+
+Los scripts se ejecutarán desde SQL Server Management Studio, utilizando la base de datos `BusRD`.
+
+### Fase 1. Preparación y demostración del problema original
+
+1. Crear la base de datos ejecutando `01_BusRD_base.sql`.
+2. Crear el procedimiento original ejecutando `02_sp_VenderBoleto_v0.sql`.
+3. Ejecutar las pruebas de concurrencia con el procedimiento original antes de agregar la restricción de unicidad de los boletos activos.
+4. Abrir dos ventanas de consulta en SSMS y probar la venta del mismo asiento libre con menos de diez segundos de diferencia.
+5. Ejecutar una consulta `SELECT` para evidenciar la doble venta.
+
+Esta prueba debe realizarse antes de aplicar la restricción que impide vender dos veces el mismo asiento. También puede utilizarse una copia independiente de la base de datos para reproducir el problema.
+
+### Fase 2. Integridad y procedimientos transaccionales
+
+| Orden | Script | Actividad |
+|---|---|---|
+| 1 | `01_integridad.sql` | Detectar datos sucios, limpiar duplicados y pagos huérfanos, y agregar las restricciones necesarias. |
+| 2 | `02_sp_VenderBoleto.sql` | Crear el procedimiento transaccional para vender boletos sin permitir ventas duplicadas. |
+| 3 | `03_sp_AnularBoleto.sql` | Crear el procedimiento para anular boletos y registrar el reverso del pago. |
+
+El procedimiento de venta debe validar el viaje, el asiento, el cliente, el canal y el método de pago. También debe garantizar la atomicidad de las operaciones, manejar errores mediante `TRY...CATCH` y devolver el identificador del boleto mediante un parámetro `OUTPUT`.
+
+### Fase 3. Prueba de concurrencia
+
+| Orden | Script | Actividad |
+|---|---|---|
+| 1 | `04_demo_concurrencia_sesionA.sql` | Ejecutar la venta desde la sesión A. |
+| 2 | `05_demo_concurrencia_sesionB.sql` | Intentar vender el mismo asiento desde la sesión B. |
+
+Los dos scripts deben ejecutarse en ventanas independientes y coordinadas. La sesión A debe iniciar primero y la sesión B debe intentar vender el mismo asiento mientras la primera transacción mantiene el bloqueo.
+
+Se debe comprobar que la segunda operación espera y posteriormente se rechaza, sin generar dos boletos activos para el mismo viaje y asiento.
+
+### Fase 4. Optimización de consultas
+
+Ejecutar:
+
+`06_indices_y_consultas_optimizadas.sql`
+
+Se analizarán las tres consultas lentas del docente, documentando:
+
+- El plan de ejecución real antes y después.
+- Las lecturas lógicas y el tiempo de CPU mediante `SET STATISTICS IO ON` y `SET STATISTICS TIME ON`.
+- Los operadores costosos identificados.
+- Los índices creados y la justificación de sus columnas clave e `INCLUDE`.
+- La equivalencia de los resultados antes y después de las optimizaciones.
+
+Para la consulta C1 se utilizará el viaje asignado al grupo, en lugar del viaje 16000. Para C2 se utilizará la cédula del cliente correspondiente al número del grupo multiplicado por 1000.
+
+### Fase 5. Seguridad
+
+Ejecutar:
+
+`07_seguridad.sql`
+
+Se crearán los roles y permisos requeridos:
+
+| Rol | Permisos principales |
+|---|---|
+| `rol_taquilla` | Ejecutar los procedimientos de venta y anulación, y consultar la vista de asientos disponibles. |
+| `rol_reportes` | Consultar la vista de ventas mensuales, sin acceder a datos privados de clientes como correo electrónico y teléfono. |
+| `rol_admin` | Administrar completamente la base de datos. |
+
+Se crearán usuarios de prueba para cada rol y se comprobarán los accesos permitidos y denegados. Las evidencias demostrarán la aplicación del principio de mínimo privilegio.
+
+### Fase 6. Respaldo y recuperación
+
+Ejecutar:
+
+`08_respaldo_y_restauracion.sql`
+
+La secuencia de trabajo será:
+
+1. Cambiar el modelo de recuperación de la base de datos a `FULL`.
+2. Realizar un respaldo completo.
+3. Vender cinco boletos.
+4. Realizar un respaldo diferencial.
+5. Vender tres boletos adicionales.
+6. Realizar un respaldo del log de transacciones.
+7. Registrar la hora exacta de la operación.
+8. Simular el error mediante un `DELETE` de los boletos del viaje asignado.
+9. Realizar un respaldo del log de cola (*tail-log backup*), cuando corresponda.
+10. Restaurar la base de datos como `BusRD_Recuperada`, utilizando `STOPAT` para recuperar el estado anterior al borrado.
+11. Verificar que los ocho boletos vendidos existen y que los boletos eliminados se recuperaron.
+
+Los archivos de respaldo se guardarán en una carpeta como `C:\Backups\BusRD\`. Las operaciones destructivas se realizarán únicamente en el entorno de pruebas.
+
+## 7. Evidencias requeridas
+
+Las capturas de pantalla se guardarán en la carpeta `evidencias/`, ordenadas por entregable.
+
+| Entregable | Evidencias |
+|---|---|
+| E1. Integridad | Datos sucios detectados, limpieza aplicada y restricciones creadas. |
+| E2. Concurrencia | Doble venta con el procedimiento original y rechazo de la segunda venta con el procedimiento corregido. |
+| E3. Optimización | Planes de ejecución, métricas antes/después y comparación de resultados. |
+| E4. Seguridad | Accesos permitidos y denegados para los tres roles. |
+| E5. Respaldos | Copias realizadas, restauración con `STOPAT` y verificación de los datos recuperados. |
+| E6. Informe | Documento PDF final y repositorio organizado. |
+
+Las capturas deben ser legibles, estar numeradas y mostrar los resultados relevantes de cada prueba.
+
+## 8. Informe final
+
+El informe se entregará en formato PDF, con un máximo de diez páginas, sin contar la portada ni los anexos.
+
+Su estructura será:
+
+1. **Introducción:** problema y alcance del proyecto.
+2. **Integridad:** datos sucios encontrados, limpieza y restricciones.
+3. **Concurrencia:** reproducción del problema, causa, solución y evidencias.
+4. **Optimización:** comparación de las tres consultas y conclusiones.
+5. **Seguridad:** roles, permisos, evidencias y explicación de *ownership chaining*.
+6. **Respaldos:** secuencia ejecutada, restauración y política propuesta.
+7. **Conclusiones:** aprendizajes obtenidos y riesgos pendientes.
+8. **Anexo:** aporte de cada integrante.
+
+## 9. Recomendaciones de ejecución
+
+- Utilizar SQL Server Management Studio y verificar que todas las ventanas estén conectadas al servidor y a la base de datos correctos.
+- Ejecutar los scripts sobre una base recién creada, respetando sus dependencias.
+- No aplicar la restricción de unicidad antes de reproducir la doble venta con el procedimiento original.
+- No ejecutar simultáneamente scripts que deban respetar un orden específico.
+- No modificar ni eliminar datos de la base original sin contar con un respaldo o una copia de pruebas.
+- Comprobar los resultados de cada script antes de continuar.
+- Documentar cualquier error encontrado y la solución aplicada.
+- Verificar que el proyecto completo se ejecute sin errores antes de entregar el repositorio.
+
+## 10. Conclusión
+
+El proyecto BusRD permite aplicar conceptos fundamentales de administración de bases de datos mediante un caso práctico de venta de boletos. Su desarrollo busca garantizar la integridad de los datos, evitar la doble venta de asientos, mejorar el rendimiento de las consultas, controlar el acceso a la información y asegurar la recuperación de los datos ante errores.
+
+Cada integrante debe conocer y poder explicar los scripts desarrollados, las decisiones técnicas tomadas y las evidencias presentadas durante la exposición.
